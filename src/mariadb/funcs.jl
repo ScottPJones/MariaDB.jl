@@ -556,7 +556,7 @@ Any subsequent calls to any mysql function (except *mysql_options()*) will fail 
 *mysql_real_connect()* was called.
 Memory allocated by **mysql_init()** must be freed with *mysql_close()*.
 """
-mysql_init() = ccall( (:mysql_init, mariadb_lib), MYSQL, (Ptr{Void},), C_NULL)
+mysql_init() = MYSQL(ccall( (:mysql_init, mariadb_lib), Ptr{Void}, (Ptr{Void},), C_NULL))
 
 """
 # Descriiption
