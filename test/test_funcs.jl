@@ -3,22 +3,25 @@ module TestFuncs
 using Base.Test
 using MariaDB
 
+# This means we could use a different database, that had the same interface as MariaDB
+const DB = MariaDB
+
 function connect_to_database(user::AbstractString,
                              password::AbstractString,
-                             db::AbstractString)
-    mysql = mysql_init()
-    @test mysql.ptr != C_NULL
+                             dbname::AbstractString)
+    db = DB.init()
+    @test db.ptr != C_NULL
 
-    connect_flags = MariaDB.CLIENT_MULTI_RESULTS | MariaDB.CLIENT_MULTI_STATEMENTS
-    mysql = mysql_real_connect(mysql, "localhost", user,
-                               passwd=password, db=db, flags=connect_flags)
-    @test mysql.ptr != C_NULL
+    connect_flags = DB.CLIENT_MULTI_RESULTS | DB.CLIENT_MULTI_STATEMENTS
+    db = DB.real_connect(db, "localhost", user,
+                              passwd=password, dbname=dbname, flags=connect_flags)
+    @test db.ptr != C_NULL
 
-    mysql
+    db
 end
 
 function create_test_database()
-    mysql = connect_to_database("root", "", "")
+    db = connect_to_database("root", "", "")
     cmd = """create database db_test;
              alter database db_test DEFAULT CHARACTER SET = utf8mb4;
              alter database db_test DEFAULT COLLATE = utf8mb4_unicode_ci;
@@ -26,44 +29,44 @@ function create_test_database()
              grant ALL on db_test.* to 'maarten'@'localhost';
              create user 'michael'@'localhost' identified by 'pwd_michael';
 	     grant SELECT on db_test.* to 'michael'@'localhost';"""
-    rc = mysql_real_query(mysql, cmd)
-    rc != MYSQL_OK && println(mysql_error(mysql))
-    @test rc == MYSQL_OK
-    mysql_close(mysql)
+    rc = DB.real_query(db, cmd)
+    rc != DB_OK && println(DB.last_error(db))
+    @test rc == DB_OK
+    DB.close(db)
 end
 
 function drop_test_database()
-    mysql = connect_to_database("root", "", "")
+    db = connect_to_database("root", "", "")
 
     command = "drop user 'maarten'@'localhost';"
     command = string(command, "drop user 'michael'@'localhost';")
     command = string(command, "drop database db_test;")
-    rc = mysql_real_query(mysql, command)
-    rc != MYSQL_OK && println(mysql_error(mysql))
-    @test rc == MYSQL_OK
+    rc = DB.real_query(db, command)
+    rc != DB_OK && println(DB.last_error(db))
+    @test rc == DB_OK
 
-    mysql_close(mysql)
+    DB.close(db)
 end
 
 function prepare_database()
-    mysql = connect_to_database("root", "", "")
+    db = connect_to_database("root", "", "")
     # Check to see if we already have a database 'db_test'
     command = "show databases like 'db_test';"
-    rc = mysql_real_query(mysql, command)
-    rc != MYSQL_OK && println(mysql_error(mysql))
-    @test rc == MYSQL_OK
-    fc = mysql_field_count(mysql)
+    rc = DB.real_query(db, command)
+    rc != DB_OK && println(DB.last_error(db))
+    @test rc == DB_OK
+    fc = DB.field_count(db)
     @test fc == 1
-    reshndl = mysql_use_result(mysql)
+    reshndl = DB.use_result(db)
     @test reshndl.ptr != C_NULL
     rowCount = 0
-    while length(mysql_fetch_row(reshndl)) != 0
+    while length(DB.fetch_row(reshndl)) != 0
         rowCount += 1
     end
 
-    mysql_free_result(reshndl)
+    DB.free_result(reshndl)
 
-    mysql_close(mysql)
+    DB.close(db)
     if rowCount > 0
         println("Database 'db_test' found")
         println("\tRecreating...")
@@ -77,8 +80,8 @@ end
 
 function create_tables()
     println("\tCreating tables ...")
-    mysql = connect_to_database("maarten", "pwd_maarten", "db_test")
-    @test mysql.ptr != C_NULL
+    db = connect_to_database("maarten", "pwd_maarten", "db_test")
+    @test db.ptr != C_NULL
 
     command = "create table Persons (
         ID INT NOT NULL AUTO_INCREMENT,
@@ -103,25 +106,25 @@ function create_tables()
         ('Andrew', 'Joy')
     ;")
 
-    rc = mysql_real_query(mysql, command)
-    if rc != MYSQL_OK
-        println(mysql_error(mysql))
+    rc = DB.real_query(db, command)
+    if rc != DB_OK
+        println(DB.last_error(db))
     end
-    @test rc == MYSQL_OK
+    @test rc == DB_OK
 
     # Loop over results and clear out
-    rc = mysql_next_result(mysql)
-    while rc == MYSQL_OK
-        if mysql_field_count(mysql) > 0
-            reshndl = mysql_store_result(mysql)
-            mysql_free_result(reshndl)
+    rc = DB.next_result(db)
+    while rc == DB_OK
+        if DB.field_count(db) > 0
+            reshndl = DB.store_result(db)
+            DB.free_result(reshndl)
         end
-        rc = mysql_next_result(mysql)
+        rc = DB.next_result(db)
     end
-    if rc > MYSQL_OK
-        println(mysql_error(mysql))
+    if rc > DB_OK
+        println(DB.last_error(db))
     end
-    @test rc == MYSQL_NO_MORE_RESULTS
+    @test rc == DB.NO_MORE_RESULTS
 
     command = "create table Skills (
         ID INT NOT NULL AUTO_INCREMENT,
@@ -141,25 +144,25 @@ function create_tables()
         ('Julia')
     ;")
 
-    rc = mysql_real_query(mysql, command)
-    if rc != MYSQL_OK
-        println(mysql_error(mysql))
+    rc = DB.real_query(db, command)
+    if rc != DB_OK
+        println(DB.last_error(db))
     end
-    @test rc == MYSQL_OK
+    @test rc == DB_OK
 
     # Loop over results and clear out
-    rc = mysql_next_result(mysql)
-    while rc == MYSQL_OK
-        if mysql_field_count(mysql) > 0
-            reshndl = mysql_store_result(mysql)
-            mysql_free_result(reshndl)
+    rc = DB.next_result(db)
+    while rc == DB_OK
+        if DB.field_count(db) > 0
+            reshndl = DB.store_result(db)
+            DB.free_result(reshndl)
         end
-        rc = mysql_next_result(mysql)
+        rc = DB.next_result(db)
     end
-    if rc > MYSQL_OK
-        println(mysql_error(mysql))
+    if rc > DB_OK
+        println(DB.last_error(db))
     end
-    @test rc == MYSQL_NO_MORE_RESULTS
+    @test rc == DB.NO_MORE_RESULTS
 
     cmd1 = "create table PersonSkills (
         PersonID INT NOT NULL,
@@ -187,30 +190,30 @@ function create_tables()
         (14, 2), (14, 7)
     ;"
 
-    rc = mysql_real_query(mysql, string(cmd1, cmd2))
-    if rc != MYSQL_OK
-        println(mysql_error(mysql))
+    rc = DB.real_query(db, string(cmd1, cmd2))
+    if rc != DB_OK
+        println(DB.last_error(db))
     end
-    @test rc == MYSQL_OK
+    @test rc == DB_OK
 
     # Loop over results and clear out
-    rc = mysql_next_result(mysql)
-    while rc == MYSQL_OK
-        if mysql_field_count(mysql) > 0
-            reshndl = mysql_store_result(mysql)
-            mysql_free_result(reshndl)
+    rc = DB.next_result(db)
+    while rc == DB_OK
+        if DB.field_count(db) > 0
+            reshndl = DB.store_result(db)
+            DB.free_result(reshndl)
         end
-        rc = mysql_next_result(mysql)
+        rc = DB.next_result(db)
     end
-    if rc > MYSQL_OK
-        println(mysql_error(mysql))
+    if rc > DB_OK
+        println(DB.last_error(db))
     end
-    @test rc == MYSQL_NO_MORE_RESULTS
+    @test rc == DB.NO_MORE_RESULTS
 
-    mysql_close(mysql)
+    DB.close(db)
 end
 
-function print_fields(fields::Vector{MYSQL_FIELD})
+function print_fields(fields::Vector{DB.DB_FIELD})
     for f in fields
         println("""
                 Field: {
@@ -236,121 +239,69 @@ function print_row(row::Vector{Any})
     println("")
 end
 
-function print_result(mysql::MYSQL)
-    reshndl = mysql_use_result(mysql)
-    fields = mysql_fetch_fields(reshndl)
+function print_result(db::DB.DB)
+    reshndl = DB.use_result(db)
+    fields = DB.fetch_fields(reshndl)
     print_fields(fields)
-    row = mysql_fetch_row(reshndl)
+    row = DB.fetch_row(reshndl)
     while length(row) != 0
         print_row(row)
-        row = mysql_fetch_row(reshndl)
+        row = DB.fetch_row(reshndl)
     end
-    mysql_free_result(reshndl)
+    DB.free_result(reshndl)
 end
 
 function query_tables()
     println("\tQuerying tables ...")
-    mysql = connect_to_database("michael", "pwd_michael", "db_test")
-    @test mysql != C_NULL
+    db = connect_to_database("michael", "pwd_michael", "db_test")
+    @test db != C_NULL
 
     command = "Select * from Persons;"
     command = string(command, "Select * from Skills;")
-    rc = mysql_real_query(mysql, command)
-    if rc != MYSQL_OK
-        println(mysql_error(mysql))
+    rc = DB.real_query(db, command)
+    if rc != DB_OK
+        println(DB.last_error(db))
     end
-    @test rc == MYSQL_OK
+    @test rc == DB_OK
 
-    if mysql_field_count(mysql) > 0
-        print_result(mysql)
+    if DB.field_count(db) > 0
+        print_result(db)
     end
 
-    rc = mysql_next_result(mysql)
-    while rc == MYSQL_OK
-        if mysql_field_count(mysql) > 0
-            print_result(mysql)
+    rc = DB.next_result(db)
+    while rc == DB_OK
+        if DB.field_count(db) > 0
+            print_result(db)
         end
-        rc = mysql_next_result(mysql)
+        rc = DB.next_result(db)
     end
-    if rc > MYSQL_OK
-        println(mysql_error(mysql))
+    if rc > DB_OK
+        println(DB.last_error(db))
     end
-    @test rc == MYSQL_NO_MORE_RESULTS
+    @test rc == DB.NO_MORE_RESULTS
 
     command = "select p.FirstName, p.LastName, s.Skill from PersonSkills as ps inner join
     Persons as p on (ps.PersonID = p.ID) inner join Skills as s on (ps.SkillID = s.ID) order
     by p.FirstName, p.LastNAme, s.Skill;"
 
-    rc = mysql_real_query(mysql, command)
-    if rc != MYSQL_OK
-        println(mysql_error(mysql))
+    rc = DB.real_query(db, command)
+    if rc != DB_OK
+        println(DB.last_error(db))
     end
-    @test rc == MYSQL_OK
-    if mysql_field_count(mysql) > 0
-        print_result(mysql)
+    @test rc == DB_OK
+    if DB.field_count(db) > 0
+        print_result(db)
     end
 
-    mysql_close(mysql)
+    DB.close(db)
 end
 
-rc = mysql_library_init()
-@test rc == MYSQL_OK
+rc = DB.library_init()
+@test rc == DB_OK
 
 prepare_database()
 create_tables()
 query_tables()
 
-mysql_library_end()
-
-#=
-rc = mysql_library_init()
-@test rc == MYSQL_OK
-
-mysql = mysql_init()
-@test mysql != C_NULL
-
-rc = mysql_options(mysql, MariaDB.MYSQL_OPT_COMPRESS)
-@test rc == MYSQL_OK
-
-connect_flags = MariaDB.CLIENT_MULTI_RESULTS | MariaDB.CLIENT_MULTI_STATEMENTS
-mysql = mysql_real_connect(mysql, "localhost", "root", flags=connect_flags)
-@test mysql != C_NULL
-
-client_info = mysql_get_client_info()
-println(client_info)
-
-client_version = mysql_get_client_version()
-println(client_version)
-
-charset_info = mysql_get_character_set_info(mysql)
-println(charset_info)
-
-host_info = mysql_get_host_info(mysql)
-println(host_info)
-
-proto_info = mysql_get_proto_info(mysql)
-println(proto_info)
-
-server_info = mysql_get_server_info(mysql)
-println(server_info)
-
-server_version = mysql_get_server_version(mysql)
-println(server_version)
-
-ssl_cipher = mysql_get_ssl_cipher(mysql)
-@test ssl_cipher == ""
-
-commands = "create database db_test;
-alter database db_test DEFAULT CHARACTER SET = utf8mb4;
-alter database db_test DEFAULT COLLATE = utf8mb4_unicode_ci;"
-rc = mysql_real_query(mysql, commands)
-if rc != MYSQL_OK
-    print(mysql_error(mysql))
-end
-@test rc ==  MYSQL_OK
-
-mysql_close(mysql)
-mysql_library_end()
-=#
-
+DB.library_end()
 end
