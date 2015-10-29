@@ -61,46 +61,28 @@ end
 
 immutable JT_ERROR ; end
     
-for typ in (:DECIMAL, :TIMESTAMP, :DATE, :TIME, :DATETIME, :YEAR)
-    nam = symbol("JT_", typ)
+for nam in (:JT_DECIMAL, :JT_TIMESTAMP, :JT_DATE, :JT_TIME, :JT_DATETIME, :JT_YEAR,
+            :JT_VARCHAR, :JT_CHAR, :JT_BIT, :JT_ENUM, :JT_SET, :JT_GEOMETRY,
+            :JT_TINY_TEXT, :JT_MEDIUM_TEXT, :JT_LONG_TEXT, :JT_TEXT)
     @eval immutable $nam ; val::ByteString ; end
     @eval $(nam)(val::Vector{UInt8}) = $(nam)(bytestring(val))
     @eval show(io::IO, val::$nam) = show(io, val.val)
     @eval dbparse(::Type{$nam}, val::Vector{UInt8}) = $nam(bytestring(val))
 end
 
-for typ in (:VARCHAR, :CHAR, :BIT, :ENUM, :SET, :GEOMETRY)
-    nam = symbol("JT_", typ)
-    @eval immutable $nam ; val::ByteString ; end
-    @eval show(io::IO, val::$nam) = show(io, val.val)
-    @eval dbparse(::Type{$nam}, val::Vector{UInt8}) = $nam(bytestring(val))
-end
-
-for typ in (:TINY_TEXT, :MEDIUM_TEXT, :LONG_TEXT, :TEXT)
-    nam = symbol("JT_", typ)
-    # Shouldn't this be ByteString?
-    @eval immutable $nam ; val::Vector{UInt8} ; end
-    @eval show(io::IO, val::$nam) = show(io, bytestring(val.val))
-    @eval dbparse(::Type{$nam}, val::Vector{UInt8}) = $nam(bytestring(val))
-end
-    
-for typ in (:TINY_BLOB, :MEDIUM_BLOB, :LONG_BLOB, :VARBINARY, :BINARY, :BLOB)
-    nam = symbol("JT_", typ)
+for nam in (:JT_TINY_BLOB, :JT_MEDIUM_BLOB, :JT_LONG_BLOB, :JT_VARBINARY, :JT_BINARY, :JT_BLOB)
     @eval type $nam ; val::Vector{UInt8} ; end
     @eval show(io::IO, val::$nam) = show(io, val.val)
     @eval dbparse(::Type{$nam}, val::Vector{UInt8}) = $nam(val)
 end
 
-export JT_TEXT_TYPES, JT_BINARY_TYPES
-const JT_TEXT_TYPES = (JT_DECIMAL, JT_TIMESTAMP, JT_DATE, JT_TIME, JT_DATETIME, JT_YEAR,
-                       JT_VARCHAR, JT_CHAR, JT_BIT, JT_ENUM, JT_SET, JT_GEOMETRY,
-                       JT_TINY_TEXT, JT_MEDIUM_TEXT, JT_LONG_TEXT, JT_TEXT)
-const JT_BINARY_TYPES = (JT_TINY_BLOB, JT_MEDIUM_BLOB, JT_LONG_BLOB,
-                         JT_VARBINARY, JT_BINARY, JT_BLOB)
-const JT_TYPES = Union{JT_TIMESTAMP, JT_VARCHAR, JT_CHAR, JT_BIT, JT_ENUM, JT_SET, JT_GEOMETRY,
-                       JT_TINY_TEXT, JT_MEDIUM_TEXT, JT_LONG_TEXT, JT_TEXT,
-		       JT_TINY_BLOB, JT_MEDIUM_BLOB, JT_LONG_BLOB,
-		       JT_VARBINARY, JT_BINARY, JT_BLOB}
+const JT_BINARY_TYPES =
+      (JT_TINY_BLOB, JT_MEDIUM_BLOB, JT_LONG_BLOB, JT_VARBINARY, JT_BINARY, JT_BLOB)
+const JT_TEXT_TYPES   =
+      (JT_TINY_TEXT, JT_MEDIUM_TEXT, JT_LONG_TEXT, JT_VARCHAR, JT_CHAR, JT_TEXT)
+
+const JT_TYPES =
+    Union{JT_TIMESTAMP, JT_BIT, JT_ENUM, JT_SET, JT_GEOMETRY, JT_TEXT_TYPES..., JT_BINARY_TYPES...}
 
 dbparse{T<:Number}(::Type{T}, val) = parse(T, bytestring(val))
 
@@ -116,71 +98,58 @@ end
 
 _typeindex(ft::DB_FIELD_TYPE) = _typeindex(UInt32(ft))
 
-const typearray =
-#                  Signed        Signed       Unsigned      Unsigned
-#     Name         Text          Binary       Text          Binary
-    [("DECIMAL",   JT_DECIMAL,   JT_ERROR,    JT_DECIMAL,   JT_ERROR),
-     ("TINY",      Int8,         Int8,        UInt8,        UInt8),
-     ("SHORT",     Int16,        Int16,       UInt16,       UInt8),
-     ("LONG",      Int32,        Int32,       UInt32,       UInt32),
-     ("FLOAT",     Float32,      Float32,     Float32,      Float32),
-     ("DOUBLE",    Float64,      Float64,     Float64,      Float64),
-     ("NULL",      Void,         Void,        Void,         Void),
-     ("TIMESTAMP", JT_ERROR,     JT_ERROR,    JT_ERROR,     JT_TIMESTAMP),
-     ("LONGLONG",  UInt64,       UInt64,      UInt64,       UInt64),
-     ("INT24",     Int32,        Int32,       UInt32,       UInt32),
-     ("DATE",      JT_DATE,      JT_ERROR,    JT_DATE,      JT_ERROR),
-     ("TIME",      JT_TIME,      JT_ERROR,    JT_TIME,      JT_ERROR),
-     ("DATETIME",  JT_DATETIME,  JT_ERROR,    JT_DATETIME,  JT_ERROR),
-     ("YEAR",      JT_ERROR,	 JT_ERROR,    JT_YEAR,      JT_ERROR),
-     ("NOWDATE",   JT_ERROR,     JT_ERROR,    JT_ERROR,     JT_DATETIME),
-     ("VARCHAR",   JT_VARCHAR,   JT_VARBINARY,JT_VARCHAR,   JT_VARBINARY),
-     ("BIT",       JT_BIT,       JT_ERROR,    JT_BIT,       JT_ERROR),
-     ("TIMESTAMP2",JT_ERROR,     JT_ERROR,    JT_ERROR,     JT_TIMESTAMP),
-     ("DATETIME2", JT_DATETIME,  JT_ERROR,    JT_DATETIME,  JT_ERROR),
-     ("TIME2",     JT_TIME,      JT_ERROR,    JT_TIME,      JT_ERROR),
-     ("NEWDECIMAL",JT_DECIMAL,   JT_ERROR,    JT_DECIMAL,   JT_ERROR),
-     ("ENUM",      JT_ENUM,      JT_ERROR,    JT_ENUM,      JT_ERROR),
-     ("SET",       JT_SET,       JT_ERROR,    JT_SET,       JT_ERROR),
-     ("TINY_BLOB", JT_TINY_TEXT, JT_TINY_BLOB,JT_TINY_TEXT, JT_TINY_BLOB),
-     ("MEDIUM_BLOB",JT_MEDIUM_TEXT,JT_MEDIUM_BLOB,JT_MEDIUM_TEXT,JT_MEDIUM_BLOB),
-     ("LONG_BLOB", JT_LONG_TEXT, JT_LONG_BLOB,JT_LONG_TEXT, JT_LONG_BLOB),
-     ("BLOB",      JT_TEXT,      JT_BLOB,     JT_TEXT,      JT_BLOB),
-     ("VAR_STRING",JT_VARCHAR,   JT_VARBINARY,JT_VARCHAR,   JT_VARBINARY),
-     ("STRING",    JT_CHAR,      JT_BINARY,   JT_CHAR,      JT_BINARY),
-     ("GEOMETRY",  JT_GEOMETRY,  JT_ERROR,    JT_GEOMETRY,  JT_ERROR)]
+macro jtyptxt(nam)
+    :( ($(string(nam)), $(string(nam)), "", "",
+        $(symbol("JT_",nam)), $(symbol("JT_",nam)), JT_ERROR, JT_ERROR) )
+end
+macro jtypnum(nam,st,ut)
+    :( ($(string(nam)), $(string(nam," UNSIGNED")),$(string(nam)), $(string(nam," UNSIGNED")),
+        $st, $ut, $st, $ut) )
+end
+macro jtypren(nam,typ)
+    :( ($(string(nam)), $(string(nam)), "", "",
+        $(symbol("JT_",typ)), $(symbol("JT_",typ)), JT_ERROR, JT_ERROR) )
+end
+macro jtypstr(t1,t2)
+    :( ($(string(t1)), $(string(t1)), $(string(t2)), $(string(t2)),
+        $(symbol("JT_",t1)), $(symbol("JT_",t1)), $(symbol("JT_",t2)), $(symbol("JT_",t2))) )
+end
 
-const textarray =
-    ["DECIMAL",
-     "TINY",
-     "SHORT",
-     "LONG",
-     "FLOAT",
-     "DOUBLE",
-     "NULL",
-     "TIMESTAMP",
-     "LONGLONG",
-     "INT24",
-     "DATE",
-     "TIME",
-     "DATETIME",
-     "YEAR",
-     "NOWDATE",
-     "VARCHAR",
-     "BIT",
-     "TIMESTAMP2",
-     "DATETIME2",
-     "TIME2",
-     "NEWDECIMAL",
-     "ENUM",
-     "SET",
-     "TINY_TEXT",
-     "MEDIUM_TEXT",
-     "LONG_TEXT",
-     "TEXT",
-     "VARCHAR",
-     "CHAR",
-     "GEOMETRY"]
+const typearray =
+#     Signed        UnSigned     Signed        Unsigned
+#     Text          Text         Binary        Binary
+    [@jtyptxt(:DECIMAL),
+     @jtypnum(:TINY,     Int8,    UInt8),
+     @jtypnum(:SHORT,    Int16,   UInt16),
+     @jtypnum(:LONG,     Int32,   UInt32),
+     @jtypnum(:FLOAT,    Float32, Float32),
+     @jtypnum(:DOUBLE,   Float64, Float64),
+     ("NULL","NULL","NULL","NULL",Void,Void,Void,Void),
+     ("","","","TIMESTAMP",JT_ERROR,JT_ERROR,JT_ERROR,JT_TIMESTAMP),
+     @jtypnum(:LONGLONG, Int64,   UInt64),
+     @jtypnum(:INT24,    Int32,   UInt32),
+     @jtyptxt(:DATE),
+     @jtyptxt(:TIME),
+     @jtyptxt(:DATETIME),
+     ("","YEAR","","",JT_ERROR,JT_YEAR,JT_ERROR,JT_ERROR),
+     ("","","","NOWDATE",JT_ERROR,JT_ERROR,JT_ERROR,JT_TIMESTAMP),
+     @jtypstr(:VARCHAR,:VARBINARY),
+     @jtyptxt(:BIT),
+     ("","","","TIMESTAMP2",JT_ERROR,JT_ERROR,JT_ERROR,JT_TIMESTAMP),
+     @jtypren(:DATETIME2,  :DATETIME),
+     @jtypren(:TIME2,      :TIME),
+     @jtypren(:NEWDECIMAL, :DECIMAL),
+     @jtyptxt(:ENUM),
+     @jtyptxt(:SET),
+     @jtypstr(:TINY_TEXT,:TINY_BLOB),
+     @jtypstr(:MEDIUM_TEXT,:MEDIUM_BLOB),
+     @jtypstr(:LONG_TEXT,:LONG_BLOB),
+     @jtypstr(:TEXT,:BLOB),
+     ("VAR_STRING","VAR_STRING","VARBINARY","VARBINARY",
+      JT_VARCHAR,JT_VARCHAR,JT_VARBINARY,JT_VARBINARY),
+     ("STRING","STRING","BINARY","BINARY",
+      JT_CHAR,JT_CHAR,JT_BINARY,JT_BINARY),
+     @jtyptxt(:GEOMETRY))]
 
 const CHAR_SET_BINARY    = 63
 
