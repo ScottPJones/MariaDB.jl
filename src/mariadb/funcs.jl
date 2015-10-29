@@ -280,7 +280,7 @@ function fetch_row(result::DB_RES)
     row = Vector{Any}()
     ptr = ccall( (:mysql_fetch_row, mariadb_lib), Ptr{Ptr{UInt8}}, (Ptr{Void},), result.ptr)
     ptr == C_NULL &&
-        return row
+    return row
     fields = fetch_fields(result)
     lengths = fetch_lengths(result)
     for i in 1:length(fields)
@@ -291,7 +291,7 @@ function fetch_row(result::DB_RES)
               ? Void()
               : dbparse(fields[i].julia_type, pointer_to_array(colptr, lengths[i])))
     end
-    return row
+    row
 end
 
 """

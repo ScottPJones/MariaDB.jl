@@ -38,9 +38,9 @@ end
 function drop_test_database()
     db = connect_to_database("root", "", "")
 
-    command = "drop user 'maarten'@'localhost';"
-    command = string(command, "drop user 'michael'@'localhost';")
-    command = string(command, "drop database db_test;")
+    command = """drop user 'maarten'@'localhost';
+		 drop user 'michael'@'localhost';
+    		 drop database db_test;"""
     rc = DB.real_query(db, command)
     rc != DB_OK && println(DB.last_error(db))
     @test rc == DB_OK
@@ -52,21 +52,32 @@ function prepare_database()
     db = connect_to_database("root", "", "")
     # Check to see if we already have a database 'db_test'
     command = "show databases like 'db_test';"
+    println("got here 1!")
     rc = DB.real_query(db, command)
+    println("got here 2!")
     rc != DB_OK && println(DB.last_error(db))
     @test rc == DB_OK
     fc = DB.field_count(db)
+    println("got here 3!")
     @test fc == 1
     reshndl = DB.use_result(db)
+    println("got here 4!")
     @test reshndl.ptr != C_NULL
     rowCount = 0
+    println("result type\n")
+    dump(reshndl)
+    println()
     while length(DB.fetch_row(reshndl)) != 0
         rowCount += 1
+        println("got here 5! $rowCount")
     end
 
+    println("got here 6!")
     DB.free_result(reshndl)
+    println("got here 7!")
 
     DB.close(db)
+    println("got here 8!")
     if rowCount > 0
         println("Database 'db_test' found")
         println("\tRecreating...")

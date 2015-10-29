@@ -26,38 +26,15 @@ immutable DB_FIELD_OFFSET
     off::UInt32
 end
 
-@enum(DB_FIELD_TYPE,
-    FT_DECIMAL,
-    FT_TINY,
-    FT_SHORT,
-    FT_LONG,
-    FT_FLOAT,
-    FT_DOUBLE,
-    FT_NULL,
-    FT_TIMESTAMP,
-    FT_LONGLONG,
-    FT_INT24,
-    FT_DATE,
-    FT_TIME,
-    FT_DATETIME,
-    FT_YEAR,
-    FT_NOWDATE,
-    FT_VARCHAR,
-    FT_BIT,
-    FT_TIMESTAMP2,
-    FT_DATETIME2,
-    FT_TIME2,
+typealias DB_ROW Vector{Any}
 
-    FT_NEWDECIMAL = 246,
-    FT_ENUM,
-    FT_SET,
-    FT_TINY_BLOB,
-    FT_MEDIUM_BLOB,
-    FT_LONG_BLOB,
-    FT_BLOB,
-    FT_VAR_STRING,
-    FT_STRING,
-    FT_GEOMETRY)
+@enum(DB_FIELD_TYPE,
+      FT_DECIMAL, FT_TINY, FT_SHORT, FT_LONG, FT_FLOAT, FT_DOUBLE, FT_NULL, FT_TIMESTAMP,
+      FT_LONGLONG, FT_INT24, FT_DATE, FT_TIME, FT_DATETIME, FT_YEAR, FT_NOWDATE, FT_VARCHAR,
+      FT_BIT, FT_TIMESTAMP2, FT_DATETIME2, FT_TIME2,
+
+      FT_NEWDECIMAL = 246, FT_ENUM, FT_SET, FT_TINY_BLOB, FT_MEDIUM_BLOB, FT_LONG_BLOB, FT_BLOB,
+      FT_VAR_STRING, FT_STRING, FT_GEOMETRY)
 
 immutable JT_ERROR ; end
     
@@ -100,7 +77,7 @@ _typeindex(ft::DB_FIELD_TYPE) = _typeindex(UInt32(ft))
 
 macro jtyptxt(nam)
     :( ($(string(nam)), $(string(nam)), "", "",
-        $(symbol("JT_",nam)), $(symbol("JT_",nam)), JT_ERROR, JT_ERROR) )
+        $(symbol(string("JT_",nam))), $(symbol(string("JT_",nam))), JT_ERROR, JT_ERROR) )
 end
 macro jtypnum(nam,st,ut)
     :( ($(string(nam)), $(string(nam," UNSIGNED")),$(string(nam)), $(string(nam," UNSIGNED")),
@@ -108,48 +85,48 @@ macro jtypnum(nam,st,ut)
 end
 macro jtypren(nam,typ)
     :( ($(string(nam)), $(string(nam)), "", "",
-        $(symbol("JT_",typ)), $(symbol("JT_",typ)), JT_ERROR, JT_ERROR) )
+        $(symbol(string("JT_",typ))), $(symbol(string("JT_",typ))), JT_ERROR, JT_ERROR) )
 end
 macro jtypstr(t1,t2)
     :( ($(string(t1)), $(string(t1)), $(string(t2)), $(string(t2)),
-        $(symbol("JT_",t1)), $(symbol("JT_",t1)), $(symbol("JT_",t2)), $(symbol("JT_",t2))) )
+        $(symbol(string("JT_",t1))), $(symbol(string("JT_",t1))), $(symbol(string("JT_",t2))), $(symbol(string("JT_",t2)))) )
 end
 
 const typearray =
 #     Signed        UnSigned     Signed        Unsigned
 #     Text          Text         Binary        Binary
-    [@jtyptxt(:DECIMAL),
-     @jtypnum(:TINY,     Int8,    UInt8),
-     @jtypnum(:SHORT,    Int16,   UInt16),
-     @jtypnum(:LONG,     Int32,   UInt32),
-     @jtypnum(:FLOAT,    Float32, Float32),
-     @jtypnum(:DOUBLE,   Float64, Float64),
+    [@jtyptxt(DECIMAL),
+     @jtypnum(TINY,     Int8,    UInt8),
+     @jtypnum(SHORT,    Int16,   UInt16),
+     @jtypnum(LONG,     Int32,   UInt32),
+     @jtypnum(FLOAT,    Float32, Float32),
+     @jtypnum(DOUBLE,   Float64, Float64),
      ("NULL","NULL","NULL","NULL",Void,Void,Void,Void),
      ("","","","TIMESTAMP",JT_ERROR,JT_ERROR,JT_ERROR,JT_TIMESTAMP),
-     @jtypnum(:LONGLONG, Int64,   UInt64),
-     @jtypnum(:INT24,    Int32,   UInt32),
-     @jtyptxt(:DATE),
-     @jtyptxt(:TIME),
-     @jtyptxt(:DATETIME),
+     @jtypnum(LONGLONG, Int64,   UInt64),
+     @jtypnum(INT24,    Int32,   UInt32),
+     @jtyptxt(DATE),
+     @jtyptxt(TIME),
+     @jtyptxt(DATETIME),
      ("","YEAR","","",JT_ERROR,JT_YEAR,JT_ERROR,JT_ERROR),
      ("","","","NOWDATE",JT_ERROR,JT_ERROR,JT_ERROR,JT_TIMESTAMP),
-     @jtypstr(:VARCHAR,:VARBINARY),
-     @jtyptxt(:BIT),
+     @jtypstr(VARCHAR,VARBINARY),
+     @jtyptxt(BIT),
      ("","","","TIMESTAMP2",JT_ERROR,JT_ERROR,JT_ERROR,JT_TIMESTAMP),
-     @jtypren(:DATETIME2,  :DATETIME),
-     @jtypren(:TIME2,      :TIME),
-     @jtypren(:NEWDECIMAL, :DECIMAL),
-     @jtyptxt(:ENUM),
-     @jtyptxt(:SET),
-     @jtypstr(:TINY_TEXT,:TINY_BLOB),
-     @jtypstr(:MEDIUM_TEXT,:MEDIUM_BLOB),
-     @jtypstr(:LONG_TEXT,:LONG_BLOB),
-     @jtypstr(:TEXT,:BLOB),
+     @jtypren(DATETIME2,  DATETIME),
+     @jtypren(TIME2,      TIME),
+     @jtypren(NEWDECIMAL, DECIMAL),
+     @jtyptxt(ENUM),
+     @jtyptxt(SET),
+     @jtypstr(TINY_TEXT,TINY_BLOB),
+     @jtypstr(MEDIUM_TEXT,MEDIUM_BLOB),
+     @jtypstr(LONG_TEXT,LONG_BLOB),
+     @jtypstr(TEXT,BLOB),
      ("VAR_STRING","VAR_STRING","VARBINARY","VARBINARY",
       JT_VARCHAR,JT_VARCHAR,JT_VARBINARY,JT_VARBINARY),
      ("STRING","STRING","BINARY","BINARY",
       JT_CHAR,JT_CHAR,JT_BINARY,JT_BINARY),
-     @jtyptxt(:GEOMETRY))]
+     @jtyptxt(GEOMETRY)]
 
 const CHAR_SET_BINARY    = 63
 
@@ -160,39 +137,20 @@ const TIMESTAMP_DATETIME =  1
 const TIMESTAMP_TIME     =  2
 
 @enum(OPTION,
-    CONNECT_TIMEOUT,
-    OPT_COMPRESS,
-    OPT_NAMED_PIPE,
-    INIT_COMMAND,
-    READ_DEFAULT_FILE,
-    READ_DEFAULT_GROUP,
-    SET_CHARSET_DIR,
-    SET_CHARSET_NAME,
-    OPT_LOCAL_INFILE,
-    OPT_PROTOCOL,
-    SHARED_MEMORY_BASE_NAME,
-    OPT_READ_TIMEOUT,
-    OPT_WRITE_TIMEOUT,
-    OPT_USE_RESULT,
-    OPT_USE_REMOTE_CONNECTION,
-    OPT_USE_EMBEDDED_CONNECTION,
-    OPT_GUESS_CONNECTION,
-    SET_CLIENT_IP,
-    SECURE_AUTH,
-    REPORT_DATA_TRUNCATION,
-    OPT_RECONNECT,
-    OPT_SSL_VERIFY_SERVER_CERT,
-    PLUGIN_DIR,
-    DEFAULT_AUTH,
-    ENABLE_CLEARTEXT_PLUGIN,
-    PROGRESS_CALLBACK       = 5999,
-    OPT_NONBLOCK            = 6000)
+      OPT_CONNECT_TIMEOUT, OPT_COMPRESS, OPT_NAMED_PIPE, INIT_COMMAND, READ_DEFAULT_FILE,
+      READ_DEFAULT_GROUP, SET_CHARSET_DIR, SET_CHARSET_NAME, OPT_LOCAL_INFILE, OPT_PROTOCOL,
+      SHARED_MEMORY_BASE_NAME, OPT_READ_TIMEOUT, OPT_WRITE_TIMEOUT, OPT_USE_RESULT,
+      OPT_USE_REMOTE_CONNECTION, OPT_USE_EMBEDDED_CONNECTION, OPT_GUESS_CONNECTION, SET_CLIENT_IP,
+      SECURE_AUTH, REPORT_DATA_TRUNCATION, OPT_RECONNECT, OPT_SSL_VERIFY_SERVER_CERT, PLUGIN_DIR,
+      DEFAULT_AUTH, ENABLE_CLEARTEXT_PLUGIN,
+      PROGRESS_CALLBACK       = 5999,
+      OPT_NONBLOCK            = 6000)
 
 @enum(PROTOCOL_TYPE, DEFAULT, TCP, SOCKET, PIPE, MEMORY)
 
 @enum(STATUS, READY, GET_RESULT, USE_RESULT, STATEMENT_GET_RESULT)
 
-@enum(SET_OPTION, MULTI_STATEMENT_ON, OPTION_MULTI_STATEMENT_OFF)
+@enum(SET_OPTION, MULTI_STATEMENT_ON, MULTI_STATEMENT_OFF)
 
 const NO_MORE_RESULTS               = -1
 
@@ -209,73 +167,73 @@ const SHUTDOWN_KILLABLE_UPDATE      = 0x08
     WAIT_ALL_BUFFERS      = SHUTDOWN_KILLABLE_UPDATE<<1,
     WAIT_CRITICAL_BUFFERS = (SHUTDOWN_KILLABLE_UPDATE<<1)+1)
 
-const NOT_NULL_FLAG                 = 0x00000001
-const PRI_KEY_FLAG                  = 0x00000002
-const UNIQUE_KEY_FLAG               = 0x00000004
-const MULTIPLE_KEY_FLAG             = 0x00000008
-const BLOB_FLAG                     = 0x00000010
-const UNSIGNED_FLAG                 = 0x00000020
-const ZEROFILL_FLAG                 = 0x00000040
-const BINARY_FLAG                   = 0x00000080
-const ENUM_FLAG                     = 0x00000100
-const AUTO_INCREMENT_FLAG           = 0x00000200
-const TIMESTAMP_FLAG                = 0x00000400
-const SET_FLAG                      = 0x00000800
-const NO_DEFAULT_VALUE_FLAG         = 0x00001000
-const ON_UPDATE_NOW_FLAG            = 0x00002000
-const NUM_FLAG                      = 0x00004000
-const UNIQUE_FLAG                   = 0x00008000
-const BINCP_FLAG                    = 0x00010000
-const GET_FIXED_FIELDS_FLAG         = 0x00020000
-const FIELD_IN_PART_FUNC_FLAG       = 0x00040000
+const NOT_NULL_FLAG                  = 0x00000001
+const PRI_KEY_FLAG                   = 0x00000002
+const UNIQUE_KEY_FLAG                = 0x00000004
+const MULTIPLE_KEY_FLAG              = 0x00000008
+const BLOB_FLAG                      = 0x00000010
+const UNSIGNED_FLAG                  = 0x00000020
+const ZEROFILL_FLAG                  = 0x00000040
+const BINARY_FLAG                    = 0x00000080
+const ENUM_FLAG                      = 0x00000100
+const AUTO_INCREMENT_FLAG            = 0x00000200
+const TIMESTAMP_FLAG                 = 0x00000400
+const SET_FLAG                       = 0x00000800
+const NO_DEFAULT_VALUE_FLAG          = 0x00001000
+const ON_UPDATE_NOW_FLAG             = 0x00002000
+const NUM_FLAG                       = 0x00004000
+const UNIQUE_FLAG                    = 0x00008000
+const BINCP_FLAG                     = 0x00010000
+const GET_FIXED_FIELDS_FLAG          = 0x00020000
+const FIELD_IN_PART_FUNC_FLAG        = 0x00040000
 
-const CLIENT_LONG_PASSWORD          = 0x00000001
-const CLIENT_FOUND_ROWS             = 0x00000002
-const CLIENT_LONG_FLAG              = 0x00000004
-const CLIENT_CONNECT_WITH_DB        = 0x00000008
-const CLIENT_NO_SCHEMA              = 0x00000010
-const CLIENT_COMPRESS               = 0x00000020
-const CLIENT_ODBC                   = 0x00000040
-const CLIENT_LOCAL_FILES            = 0x00000080
-const CLIENT_IGNORE_SPACE           = 0x00000100
-const CLIENT_PROTOCOL_41            = 0x00000200
-const CLIENT_INTERACTIVE            = 0x00000400
-const CLIENT_SSL                    = 0x00000800
-const CLIENT_IGNORE_SIGPIPE         = 0x00001000
-const CLIENT_TRANSACTIONS           = 0x00002000
-const CLIENT_RESERVED               = 0x00004000
-const CLIENT_SECURE_CONNECTION      = 0x00008000
-const CLIENT_MULTI_STATEMENTS       = 0x00010000
-const CLIENT_MULTI_RESULTS          = 0x00020000
-const CLIENT_PS_MULTI_RESULTS       = 0x00040000
-const CLIENT_PLUGIN_AUTH            = 0x00080000
-const CLIENT_PROGRESS               = 0x20000000
-const CLIENT_SSL_VERIFY_SERVER_CERT = 0x40000000
+const CLIENT_LONG_PASSWORD           = 0x00000001
+const CLIENT_FOUND_ROWS              = 0x00000002
+const CLIENT_LONG_FLAG               = 0x00000004
+const CLIENT_CONNECT_WITH_DB         = 0x00000008
+const CLIENT_NO_SCHEMA               = 0x00000010
+const CLIENT_COMPRESS                = 0x00000020
+const CLIENT_ODBC                    = 0x00000040
+const CLIENT_LOCAL_FILES             = 0x00000080
+const CLIENT_IGNORE_SPACE            = 0x00000100
+const CLIENT_PROTOCOL_41             = 0x00000200
+const CLIENT_INTERACTIVE             = 0x00000400
+const CLIENT_SSL                     = 0x00000800
+const CLIENT_IGNORE_SIGPIPE          = 0x00001000
+const CLIENT_TRANSACTIONS            = 0x00002000
+const CLIENT_RESERVED                = 0x00004000
+const CLIENT_SECURE_CONNECTION       = 0x00008000
+const CLIENT_MULTI_STATEMENTS        = 0x00010000
+const CLIENT_MULTI_RESULTS           = 0x00020000
+const CLIENT_PS_MULTI_RESULTS        = 0x00040000
+const CLIENT_PLUGIN_AUTH             = 0x00080000
+const CLIENT_PROGRESS                = 0x20000000
+const CLIENT_SSL_VERIFY_SERVER_CERT  = 0x40000000
 
-const REFRESH_GRANT                 = 0x00000001
-const REFRESH_LOG                   = 0x00000002
-const REFRESH_TABLES                = 0x00000004
-const REFRESH_HOSTS                 = 0x00000008
-const REFRESH_STATUS                = 0x00000010
-const REFRESH_THREADS               = 0x00000020
-const REFRESH_SLAVE                 = 0x00000040
-const REFRESH_MASTER                = 0x00000080
-const REFRESH_ERROR_LOG             = 0x00000100
-const REFRESH_ENGINE_LOG            = 0x00000200
-const REFRESH_BINARY_LOG            = 0x00000400
-const REFRESH_RELAY_LOG             = 0x00000800
-const REFRESH_GENERAL_LOG           = 0x00001000
-const REFRESH_SLOW_LOG              = 0x00002000
-const REFRESH_READ_LOCK             = 0x00004000
-const REFRESH_CHECKPOINT            = 0x00008000
-const REFRESH_QUERY_CACHE           = 0x00010000
-const REFRESH_QUERY_CACHE_FREE      = 0x00020000
-const REFRESH_DES_KEY_FILE          = 0x00040000
-const REFRESH_USER_RESOURCES        = 0x00080000
-const REFRESH_TABLE_STATS           = 0x00100000
-const REFRESH_INDEX_STATS           = 0x00200000
-const REFRESH_USER_STATS            = 0x00400000
-const REFRESH_FAST                  = 0x80000000
+const REFRESH_GRANT                  = 0x00000001
+const REFRESH_LOG                    = 0x00000002
+const REFRESH_TABLES                 = 0x00000004
+const REFRESH_HOSTS                  = 0x00000008
+const REFRESH_STATUS                 = 0x00000010
+const REFRESH_THREADS                = 0x00000020
+const REFRESH_SLAVE                  = 0x00000040
+const REFRESH_MASTER                 = 0x00000080
+const REFRESH_ERROR_LOG              = 0x00000100
+const REFRESH_ENGINE_LOG             = 0x00000200
+const REFRESH_BINARY_LOG             = 0x00000400
+const REFRESH_RELAY_LOG              = 0x00000800
+const REFRESH_GENERAL_LOG            = 0x00001000
+const REFRESH_SLOW_LOG               = 0x00002000
+const REFRESH_READ_LOCK              = 0x00004000
+const REFRESH_CHECKPOINT             = 0x00008000
+const REFRESH_QUERY_CACHE            = 0x00010000
+const REFRESH_QUERY_CACHE_FREE       = 0x00020000
+const REFRESH_DES_KEY_FILE           = 0x00040000
+const REFRESH_USER_RESOURCES         = 0x00080000
+const REFRESH_TABLE_STATS            = 0x00100000
+const REFRESH_INDEX_STATS            = 0x00200000
+const REFRESH_USER_STATS             = 0x00400000
+const REFRESH_FAST                   = 0x80000000
 
 macro c_str_2_str(c_str)
     return :($c_str == C_NULL ? "" : bytestring($c_str))
@@ -314,13 +272,13 @@ _DB_FIELD_() = _DB_FIELD_(C_NULL, C_NULL, C_NULL, C_NULL, C_NULL, C_NULL, C_NULL
                           0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, C_NULL)
 
 type DB_FIELD
-    name::UTF8String
-    org_name::UTF8String
-    table::UTF8String
-    org_table::UTF8String
-    db::UTF8String
-    catalog::UTF8String
-    def::UTF8String
+    name::ByteString
+    org_name::ByteString
+    table::ByteString
+    org_table::ByteString
+    db::ByteString
+    catalog::ByteString
+    def::ByteString
     length::UInt
     max_length::UInt
     flags::UInt32
@@ -332,17 +290,11 @@ type DB_FIELD
 end
 
 map_sql_type(typ, csn, fla) =
-    typearray[typ][(csn == CHAR_SET_BINARY ? 3 : 2) + ((fla & UNSIGNED_FLAG != 0) ? 2 : 0)]
+    typearray[typ][(csn == CHAR_SET_BINARY ? 7 : 5) + ((fla & UNSIGNED_FLAG != 0) ? 1 : 0)]
 
 function db_type_name(field::DB_FIELD)
     typ = typearray[field.type_index]
-    if typ[2] != typ[4] && (field.flags & UNSIGNED_FLAG) != 0
-        string(typ[1]," UNSIGNED")
-    elseif field.charsetnr == CHAR_SET_BINARY
-        typ[1]
-    else
-        textarray[field.type_index]
-    end
+    typ[(field.charsetnr == CHAR_SET_BINARY ? 3 : 1) + ((field.flags & UNSIGNED_FLAG != 0) ? 1 : 0)]
 end
 
 DB_FIELD() = DB_FIELD("", "", "", "", "", 0, 0, 0, 0, 0, Void)
@@ -378,14 +330,14 @@ end
 _DB_CHARSET_INFO_() = _DB_CHARSET_INFO_(0, 0, C_NULL, C_NULL, C_NULL, C_NULL, 0, 0)
 
 type DB_CHARSET_INFO
-    number::UInt
-    state::UInt
-    csname::UTF8String
-    name::UTF8String
-    comment::UTF8String
-    dir::UTF8String
-    mbminlen::UInt
-    mbmaxlen::UInt
+    number::UInt32
+    state::UInt32
+    csname::ByteString
+    name::ByteString
+    comment::ByteString
+    dir::ByteString
+    mbminlen::UInt32
+    mbmaxlen::UInt32
 end
 
 DB_CHARSET_INFO() = DB_CHARSET_INFO(0, 0, "", "", "", "", 0, 0)
