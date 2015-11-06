@@ -76,21 +76,21 @@ end
 _typeindex(ft::DB_FIELD_TYPE) = _typeindex(UInt32(ft))
 
 macro jtyptxt(nam)
-    sym = symbol(string("JT_",nam))
-    :( ($(string(nam)), $(string(nam)), "", "",
-        $sym, $sym, $sym, $sym) )
+    sym = symbol(string("JT_",nam)) ; n = string(nam)
+    :( ($n, $n, $n, $n, $sym, $sym, $sym, $sym) )
 end
 macro jtypnum(nam,st,ut)
-    :( ($(string(nam)), $(string(nam," UNSIGNED")),$(string(nam)), $(string(nam," UNSIGNED")),
-        $st, $ut, $st, $ut) )
+    sn = string(nam) ; un = string(nam," UNSIGNED")
+    :( ($sn, $un, $sn, $un, $st, $ut, $st, $ut) )
 end
 macro jtypren(nam,typ)
-    :( ($(string(nam)), $(string(nam)), "", "",
-        $(symbol(string("JT_",typ))), $(symbol(string("JT_",typ))), JT_ERROR, JT_ERROR) )
+    sym = symbol(string("JT_",typ)) ; n = string(nam)
+    :( ($n, $n, $n, $n, $sym, $sym, $sym, $sym) )
 end
 macro jtypstr(t1,t2)
-    :( ($(string(t1)), $(string(t1)), $(string(t2)), $(string(t2)),
-        $(symbol(string("JT_",t1))), $(symbol(string("JT_",t1))), $(symbol(string("JT_",t2))), $(symbol(string("JT_",t2)))) )
+    n1 = string(t1) ; n2 = string(t2)
+    s1 = symbol(string("JT_",t1)) ; s2 = symbol(string("JT_",t2))
+    :( ($n1, $n1, $n2, $n2, $s1, $s2, $s1, $s2) )
 end
 
 const typearray =
