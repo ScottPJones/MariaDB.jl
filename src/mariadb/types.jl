@@ -76,8 +76,9 @@ end
 _typeindex(ft::DB_FIELD_TYPE) = _typeindex(UInt32(ft))
 
 macro jtyptxt(nam)
+    sym = symbol(string("JT_",nam))
     :( ($(string(nam)), $(string(nam)), "", "",
-        $(symbol(string("JT_",nam))), $(symbol(string("JT_",nam))), JT_ERROR, JT_ERROR) )
+        $sym, $sym, $sym, $sym) )
 end
 macro jtypnum(nam,st,ut)
     :( ($(string(nam)), $(string(nam," UNSIGNED")),$(string(nam)), $(string(nam," UNSIGNED")),
@@ -102,17 +103,17 @@ const typearray =
      @jtypnum(FLOAT,    Float32, Float32),
      @jtypnum(DOUBLE,   Float64, Float64),
      ("NULL","NULL","NULL","NULL",Void,Void,Void,Void),
-     ("","","","TIMESTAMP",JT_ERROR,JT_ERROR,JT_ERROR,JT_TIMESTAMP),
+     @jtyptxt(TIMESTAMP),
      @jtypnum(LONGLONG, Int64,   UInt64),
      @jtypnum(INT24,    Int32,   UInt32),
      @jtyptxt(DATE),
      @jtyptxt(TIME),
      @jtyptxt(DATETIME),
-     ("","YEAR","","",JT_ERROR,JT_YEAR,JT_ERROR,JT_ERROR),
-     ("","","","NOWDATE",JT_ERROR,JT_ERROR,JT_ERROR,JT_TIMESTAMP),
+     @jtyptxt(YEAR),
+     @jtypren(NOWDATE, TIMESTAMP),
      @jtypstr(VARCHAR,VARBINARY),
      @jtyptxt(BIT),
-     ("","","","TIMESTAMP2",JT_ERROR,JT_ERROR,JT_ERROR,JT_TIMESTAMP),
+     @jtypren(TIMESTAMP2, TIMESTAMP),
      @jtypren(DATETIME2,  DATETIME),
      @jtypren(TIME2,      TIME),
      @jtypren(NEWDECIMAL, DECIMAL),
