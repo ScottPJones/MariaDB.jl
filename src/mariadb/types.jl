@@ -4,328 +4,168 @@
 # The Julia wrapper types are:
 # Copyright (c) 2015 Dynactionize NV
 
-export MYSQL, MYSQL_RES, MYSQL_ROW, MYSQL_FIELD_OFFSET, MYSQL_ROW_OFFSET
+export DB, DB_ROW, DB_ROW_OFFSET, DB_FIELD_OFFSET, DB_FIELD, DB_CHARSET_INFO, DB_TIME, DB_RES
+export DB_FIELD_TYPE, OPTION, PROTOCOL_TYPE, STATUS, SET_OPTION, SHUTDOWN_LEVEL
+import Base: show
 
-type MYSQL
+type DB
     ptr::Ptr{Void}
-    MYSQL(p) = (val = new(p) ; finalizer(val, mysql_close) ; val)
+    DB(p) = (val = new(p) ; finalizer(val, close) ; val)
 end
 
-type MYSQL_RES
+type DB_RES
     ptr::Ptr{Void}
-    MYSQL_RES(p) = (val = new(p) ; finalizer(val, mysql_free_result) ; val)
+    DB_RES(p) = (val = new(p) ; finalizer(val, free_result) ; val)
 end
 
-immutable MYSQL_ROW
-    data::Vector{UTF8String}
+immutable DB_ROW_OFFSET
+    ptr::Ptr{Void}
 end
 
-immutable MYSQL_FIELD_OFFSET
+immutable DB_FIELD_OFFSET
     off::UInt32
 end
 
-immutable MYSQL_ROW_OFFSET
-    ptr::Ptr{Void}
-end
+typealias DB_ROW Vector{Any}
 
-immutable MYSQL_FIELD_TYPE
-    typ::UInt8
-end
+@enum(DB_FIELD_TYPE,
+      FT_DECIMAL, FT_TINY, FT_SHORT, FT_LONG, FT_FLOAT, FT_DOUBLE, FT_NULL, FT_TIMESTAMP,
+      FT_LONGLONG, FT_INT24, FT_DATE, FT_TIME, FT_DATETIME, FT_YEAR, FT_NOWDATE, FT_VARCHAR,
+      FT_BIT, FT_TIMESTAMP2, FT_DATETIME2, FT_TIME2,
 
-immutable MYSQL_FIELD_JULIA_TYPE
-    typ::DataType
-end
+      FT_NEWDECIMAL = 246, FT_ENUM, FT_SET, FT_TINY_BLOB, FT_MEDIUM_BLOB, FT_LONG_BLOB, FT_BLOB,
+      FT_VAR_STRING, FT_STRING, FT_GEOMETRY)
 
-export MYSQL_FIELD_TYPE
-export MYSQL_TYPE_DECIMAL, MYSQL_TYPE_TINY, MYSQL_TYPE_SHORT, MYSQL_TYPE_LONG, MYSQL_TYPE_FLOAT,
-       MYSQL_TYPE_DOUBLE, MYSQL_TYPE_NULL, MYSQL_TYPE_TIMESTAMP, MYSQL_TYPE_LONGLONG,
-       MYSQL_TYPE_INT24, MYSQL_TYPE_DATE, MYSQL_TYPE_TIME, MYSQL_TYPE_DATETIME, MYSQL_TYPE_YEAR,
-       MYSQL_TYPE_NOWDATE, MYSQL_TYPE_VARCHAR, MYSQL_TYPE_BIT, MYSQL_TYPE_TIMESTAMP2,
-       MYSQL_TYPE_DATETIME2, MYSQL_TYPE_TIME2, MYSQL_TYPE_NEWDECIMAL, MYSQL_TYPE_ENUM,
-       MYSQL_TYPE_SET, MYSQL_TYPE_TINY_BLOB, MYSQL_TYPE_MEDIUM_BLOB, MYSQL_TYPE_LONG_BLOB,
-       MYSQL_TYPE_BLOB, MYSQL_TYPE_VAR_STRING, MYSQL_TYPE_STRING, MYSQL_TYPE_GEOMETRY
-export MYSQL_TYPE_JULIA_DECIMAL, MYSQL_TYPE_JULIA_TIMESTAMP, MYSQL_TYPE_JULIA_DATE, 
-       MYSQL_TYPE_JULIA_TIME, MYSQL_TYPE_JULIA_DATETIME, MYSQL_TYPE_JULIA_YEAR, 
-       MYSQL_TYPE_JULIA_VARCHAR, MYSQL_TYPE_JULIA_CHAR, MYSQL_TYPE_JULIA_BIT, MYSQL_TYPE_JULIA_ENUM, 
-       MYSQL_TYPE_JULIA_SET, MYSQL_TYPE_JULIA_TINY_BLOB, MYSQL_TYPE_JULIA_MEDIUM_BLOB, 
-       MYSQL_TYPE_JULIA_LONG_BLOB, MYSQL_TYPE_JULIA_BLOB, MYSQL_TYPE_JULIA_TINY_TEXT,
-       MYSQL_TYPE_JULIA_MEDIUM_TEXT, MYSQL_TYPE_JULIA_LONG_TEXT, MYSQL_TYPE_JULIA_TEXT, 
-       MYSQL_TYPE_JULIA_VARBINARY, MYSQL_TYPE_JULIA_BINARY, MYSQL_TYPE_JULIA_GEOMETRY
-export MYSQL_CHAR_SET_BINARY
-
-const MYSQL_TYPE_DECIMAL        = MYSQL_FIELD_TYPE(0)
-const MYSQL_TYPE_TINY           = MYSQL_FIELD_TYPE(1)
-const MYSQL_TYPE_SHORT          = MYSQL_FIELD_TYPE(2)
-const MYSQL_TYPE_LONG           = MYSQL_FIELD_TYPE(3)
-const MYSQL_TYPE_FLOAT          = MYSQL_FIELD_TYPE(4)
-const MYSQL_TYPE_DOUBLE         = MYSQL_FIELD_TYPE(5)
-const MYSQL_TYPE_NULL           = MYSQL_FIELD_TYPE(6)
-const MYSQL_TYPE_TIMESTAMP      = MYSQL_FIELD_TYPE(7)
-const MYSQL_TYPE_LONGLONG       = MYSQL_FIELD_TYPE(8)
-const MYSQL_TYPE_INT24          = MYSQL_FIELD_TYPE(9)
-const MYSQL_TYPE_DATE           = MYSQL_FIELD_TYPE(10)
-const MYSQL_TYPE_TIME           = MYSQL_FIELD_TYPE(11)
-const MYSQL_TYPE_DATETIME       = MYSQL_FIELD_TYPE(12)
-const MYSQL_TYPE_YEAR           = MYSQL_FIELD_TYPE(13)
-const MYSQL_TYPE_NOWDATE        = MYSQL_FIELD_TYPE(14)
-const MYSQL_TYPE_VARCHAR        = MYSQL_FIELD_TYPE(15)
-const MYSQL_TYPE_BIT            = MYSQL_FIELD_TYPE(16)
-const MYSQL_TYPE_TIMESTAMP2     = MYSQL_FIELD_TYPE(17)
-const MYSQL_TYPE_DATETIME2      = MYSQL_FIELD_TYPE(18)
-const MYSQL_TYPE_TIME2          = MYSQL_FIELD_TYPE(19)
-const MYSQL_TYPE_NEWDECIMAL     = MYSQL_FIELD_TYPE(246)
-const MYSQL_TYPE_ENUM           = MYSQL_FIELD_TYPE(247)
-const MYSQL_TYPE_SET            = MYSQL_FIELD_TYPE(248)
-const MYSQL_TYPE_TINY_BLOB      = MYSQL_FIELD_TYPE(249)
-const MYSQL_TYPE_MEDIUM_BLOB    = MYSQL_FIELD_TYPE(250)
-const MYSQL_TYPE_LONG_BLOB      = MYSQL_FIELD_TYPE(251)
-const MYSQL_TYPE_BLOB           = MYSQL_FIELD_TYPE(252)
-const MYSQL_TYPE_VAR_STRING     = MYSQL_FIELD_TYPE(253)
-const MYSQL_TYPE_STRING         = MYSQL_FIELD_TYPE(254)
-const MYSQL_TYPE_GEOMETRY       = MYSQL_FIELD_TYPE(255)
-
-type MYSQL_TYPE_JULIA_DECIMAL
-    val::ByteString
-
-    MYSQL_TYPE_JULIA_DECIMAL(val::ByteString) = new(val)
-    MYSQL_TYPE_JULIA_DECIMAL(val::Vector{UInt8}) = new(bytestring(val))
-end
-
-type MYSQL_TYPE_JULIA_TIMESTAMP
-    val::ByteString
+immutable JT_ERROR ; end
     
-    MYSQL_TYPE_JULIA_TIMESTAMP(val::ByteString) = new(val)
-    MYSQL_TYPE_JULIA_TIMESTAMP(val::Vector{UInt8}) = new(bytestring(val))
+for nam in (:JT_DECIMAL, :JT_TIMESTAMP, :JT_DATE, :JT_TIME, :JT_DATETIME, :JT_YEAR,
+            :JT_VARCHAR, :JT_CHAR, :JT_BIT, :JT_ENUM, :JT_SET, :JT_GEOMETRY,
+            :JT_TINY_TEXT, :JT_MEDIUM_TEXT, :JT_LONG_TEXT, :JT_TEXT)
+    @eval immutable $nam ; val::ByteString ; end
+    @eval $(nam)(val::Vector{UInt8}) = $(nam)(bytestring(val))
+    @eval show(io::IO, val::$nam) = show(io, val.val)
+    @eval dbparse(::Type{$nam}, val::Vector{UInt8}) = $nam(bytestring(val))
 end
 
-type MYSQL_TYPE_JULIA_DATE
-    val::ByteString
-    
-    MYSQL_TYPE_JULIA_DATE(val::ByteString) = new(val)
-    MYSQL_TYPE_JULIA_DATE(val::Vector{UInt8}) = new(bytestring(val))
+for nam in (:JT_TINY_BLOB, :JT_MEDIUM_BLOB, :JT_LONG_BLOB, :JT_VARBINARY, :JT_BINARY, :JT_BLOB)
+    @eval type $nam ; val::Vector{UInt8} ; end
+    @eval show(io::IO, val::$nam) = show(io, val.val)
+    @eval dbparse(::Type{$nam}, val::Vector{UInt8}) = $nam(val)
 end
 
-type MYSQL_TYPE_JULIA_TIME
-    val::ByteString
-    
-    MYSQL_TYPE_JULIA_TIME(val::ByteString) = new(val)
-    MYSQL_TYPE_JULIA_TIME(val::Vector{UInt8}) = new(bytestring(val))
+const JT_BINARY_TYPES =
+      (JT_TINY_BLOB, JT_MEDIUM_BLOB, JT_LONG_BLOB, JT_VARBINARY, JT_BINARY, JT_BLOB)
+const JT_TEXT_TYPES   =
+      (JT_TINY_TEXT, JT_MEDIUM_TEXT, JT_LONG_TEXT, JT_VARCHAR, JT_CHAR, JT_TEXT)
+
+const JT_TYPES =
+    Union{JT_TIMESTAMP, JT_BIT, JT_ENUM, JT_SET, JT_GEOMETRY, JT_TEXT_TYPES..., JT_BINARY_TYPES...}
+
+dbparse{T<:Number}(::Type{T}, val) = parse(T, bytestring(val))
+
+"""Get small index, 1..maxindex, for MYSQL types"""
+const offindex = -UInt(FT_NEWDECIMAL)+UInt(FT_TIME2)+2
+const maxindex = UInt(FT_GEOMETRY)+offindex
+
+function _typeindex(val::UInt32)
+    val <= UInt32(FT_TIME2) && return val+1
+    UInt32(FT_NEWDECIMAL) <= val <= UInt32(FT_GEOMETRY) && return val+offindex
+    UInt32(0) # Invalid number
 end
 
-type MYSQL_TYPE_JULIA_DATETIME
-    val::ByteString
-    
-    MYSQL_TYPE_JULIA_DATETIME(val::ByteString) = new(val)
-    MYSQL_TYPE_JULIA_DATETIME(val::Vector{UInt8}) = new(bytestring(val))
+_typeindex(ft::DB_FIELD_TYPE) = _typeindex(UInt32(ft))
+
+macro jtyptxt(nam)
+    :( ($(string(nam)), $(string(nam)), "", "",
+        $(symbol(string("JT_",nam))), $(symbol(string("JT_",nam))), JT_ERROR, JT_ERROR) )
+end
+macro jtypnum(nam,st,ut)
+    :( ($(string(nam)), $(string(nam," UNSIGNED")),$(string(nam)), $(string(nam," UNSIGNED")),
+        $st, $ut, $st, $ut) )
+end
+macro jtypren(nam,typ)
+    :( ($(string(nam)), $(string(nam)), "", "",
+        $(symbol(string("JT_",typ))), $(symbol(string("JT_",typ))), JT_ERROR, JT_ERROR) )
+end
+macro jtypstr(t1,t2)
+    :( ($(string(t1)), $(string(t1)), $(string(t2)), $(string(t2)),
+        $(symbol(string("JT_",t1))), $(symbol(string("JT_",t1))), $(symbol(string("JT_",t2))), $(symbol(string("JT_",t2)))) )
 end
 
-type MYSQL_TYPE_JULIA_YEAR
-    val::ByteString
-    
-    MYSQL_TYPE_JULIA_YEAR(val::ByteString) = new(val)
-    MYSQL_TYPE_JULIA_YEAR(val::Vector{UInt8}) = new(bytestring(val))
-end
+const typearray =
+#     Signed        UnSigned     Signed        Unsigned
+#     Text          Text         Binary        Binary
+    [@jtyptxt(DECIMAL),
+     @jtypnum(TINY,     Int8,    UInt8),
+     @jtypnum(SHORT,    Int16,   UInt16),
+     @jtypnum(LONG,     Int32,   UInt32),
+     @jtypnum(FLOAT,    Float32, Float32),
+     @jtypnum(DOUBLE,   Float64, Float64),
+     ("NULL","NULL","NULL","NULL",Void,Void,Void,Void),
+     ("","","","TIMESTAMP",JT_ERROR,JT_ERROR,JT_ERROR,JT_TIMESTAMP),
+     @jtypnum(LONGLONG, Int64,   UInt64),
+     @jtypnum(INT24,    Int32,   UInt32),
+     @jtyptxt(DATE),
+     @jtyptxt(TIME),
+     @jtyptxt(DATETIME),
+     ("","YEAR","","",JT_ERROR,JT_YEAR,JT_ERROR,JT_ERROR),
+     ("","","","NOWDATE",JT_ERROR,JT_ERROR,JT_ERROR,JT_TIMESTAMP),
+     @jtypstr(VARCHAR,VARBINARY),
+     @jtyptxt(BIT),
+     ("","","","TIMESTAMP2",JT_ERROR,JT_ERROR,JT_ERROR,JT_TIMESTAMP),
+     @jtypren(DATETIME2,  DATETIME),
+     @jtypren(TIME2,      TIME),
+     @jtypren(NEWDECIMAL, DECIMAL),
+     @jtyptxt(ENUM),
+     @jtyptxt(SET),
+     @jtypstr(TINY_TEXT,TINY_BLOB),
+     @jtypstr(MEDIUM_TEXT,MEDIUM_BLOB),
+     @jtypstr(LONG_TEXT,LONG_BLOB),
+     @jtypstr(TEXT,BLOB),
+     ("VAR_STRING","VAR_STRING","VARBINARY","VARBINARY",
+      JT_VARCHAR,JT_VARCHAR,JT_VARBINARY,JT_VARBINARY),
+     ("STRING","STRING","BINARY","BINARY",
+      JT_CHAR,JT_CHAR,JT_BINARY,JT_BINARY),
+     @jtyptxt(GEOMETRY)]
 
-type MYSQL_TYPE_JULIA_VARCHAR
-    val::ByteString
-end
+const CHAR_SET_BINARY    = 63
 
-type MYSQL_TYPE_JULIA_CHAR
-    val::ByteString
-end
+const TIMESTAMP_NONE     = -2
+const TIMESTAMP_ERROR    = -1
+const TIMESTAMP_DATE     =  0
+const TIMESTAMP_DATETIME =  1
+const TIMESTAMP_TIME     =  2
 
-type MYSQL_TYPE_JULIA_BIT
-    val::ByteString
-end
+@enum(OPTION,
+      OPT_CONNECT_TIMEOUT, OPT_COMPRESS, OPT_NAMED_PIPE, INIT_COMMAND, READ_DEFAULT_FILE,
+      READ_DEFAULT_GROUP, SET_CHARSET_DIR, SET_CHARSET_NAME, OPT_LOCAL_INFILE, OPT_PROTOCOL,
+      SHARED_MEMORY_BASE_NAME, OPT_READ_TIMEOUT, OPT_WRITE_TIMEOUT, OPT_USE_RESULT,
+      OPT_USE_REMOTE_CONNECTION, OPT_USE_EMBEDDED_CONNECTION, OPT_GUESS_CONNECTION, SET_CLIENT_IP,
+      SECURE_AUTH, REPORT_DATA_TRUNCATION, OPT_RECONNECT, OPT_SSL_VERIFY_SERVER_CERT, PLUGIN_DIR,
+      DEFAULT_AUTH, ENABLE_CLEARTEXT_PLUGIN,
+      PROGRESS_CALLBACK       = 5999,
+      OPT_NONBLOCK            = 6000)
 
-type MYSQL_TYPE_JULIA_ENUM
-    val::ByteString
-end
+@enum(PROTOCOL_TYPE, DEFAULT, TCP, SOCKET, PIPE, MEMORY)
 
-type MYSQL_TYPE_JULIA_SET
-    val::ByteString
-end
+@enum(STATUS, READY, GET_RESULT, USE_RESULT, STATEMENT_GET_RESULT)
 
-type MYSQL_TYPE_JULIA_TINY_BLOB
-    val::Vector{UInt8}
-end
+@enum(SET_OPTION, MULTI_STATEMENT_ON, MULTI_STATEMENT_OFF)
 
-type MYSQL_TYPE_JULIA_MEDIUM_BLOB
-    val::Vector{UInt8}
-end
+const NO_MORE_RESULTS               = -1
 
-type MYSQL_TYPE_JULIA_LONG_BLOB
-    val::Vector{UInt8}
-end
+const SHUTDOWN_KILLABLE_CONNECT     = 0x01
+const SHUTDOWN_KILLABLE_TRANS       = 0x02
+const SHUTDOWN_KILLABLE_LOCK_TABLE  = 0x04
+const SHUTDOWN_KILLABLE_UPDATE      = 0x08
 
-type MYSQL_TYPE_JULIA_BLOB
-    val::Vector{UInt8}
-end
-
-type MYSQL_TYPE_JULIA_TINY_TEXT
-    val::Vector{UInt8}
-end
-
-type MYSQL_TYPE_JULIA_MEDIUM_TEXT
-    val::Vector{UInt8}
-end
-
-type MYSQL_TYPE_JULIA_LONG_TEXT
-    val::Vector{UInt8}
-end
-
-type MYSQL_TYPE_JULIA_TEXT
-    val::Vector{UInt8}
-end
-
-type MYSQL_TYPE_JULIA_VARBINARY
-    val::Vector{UInt8}
-end
-
-type MYSQL_TYPE_JULIA_BINARY
-    val::Vector{UInt8}
-end
-
-type MYSQL_TYPE_JULIA_GEOMETRY
-    val::ByteString
-end
-
-#TODO add all charsets
-const MYSQL_CHAR_SET_BINARY              = 63
-    
-MYSG_TYPE_STRINGS = (
-    MYSQL_TYPE_TINY_BLOB,
-    MYSQL_TYPE_MEDIUM_BLOB,
-    MYSQL_TYPE_LONG_BLOB,
-    MYSQL_TYPE_BLOB,
-    MYSQL_TYPE_STRING,
-    MYSQL_TYPE_VAR_STRING)
-    
-export MYSQL_TIMESTAMP_TYPE
-export MYSQL_TIMESTAMP_NONE, MYSQL_TIMESTAMP_ERROR, MYSQL_TIMESTAMP_DATE,
-       MYSQL_TIMESTAMP_DATETIME, MYSQL_TIMESTAMP_TIME
-
-immutable MYSQL_TIMESTAMP_TYPE
-    typ::Int8
-end
-
-const MYSQL_TIMESTAMP_NONE      = MYSQL_TIMESTAMP_TYPE(-2)
-const MYSQL_TIMESTAMP_ERROR     = MYSQL_TIMESTAMP_TYPE(-1)
-const MYSQL_TIMESTAMP_DATE      = MYSQL_TIMESTAMP_TYPE(0)
-const MYSQL_TIMESTAMP_DATETIME  = MYSQL_TIMESTAMP_TYPE(1)
-const MYSQL_TIMESTAMP_TIME      = MYSQL_TIMESTAMP_TYPE(2)
-
-
-export MYSQL_OPTION
-export MYSQL_OPT_CONNECT_TIMEOUT, MYSQL_OPT_COMPRESS, MYSQL_OPT_NAMED_PIPE, MYSQL_INIT_COMMAND,
-       MYSQL_READ_DEFAULT_FILE, MYSQL_READ_DEFAULT_GROUP, MYSQL_SET_CHARSET_DIR,
-       MYSQL_SET_CHARSET_NAME, MYSQL_OPT_LOCAL_INFILE, MYSQL_OPT_PROTOCOL,
-       MYSQL_SHARED_MEMORY_BASE_NAME, MYSQL_OPT_READ_TIMEOUT, MYSQL_OPT_WRITE_TIMEOUT,
-       MYSQL_OPT_USE_RESULT, MYSQL_OPT_USE_REMOTE_CONNECTION, MYSQL_OPT_USE_EMBEDDED_CONNECTION,
-       MYSQL_OPT_GUESS_CONNECTION, MYSQL_SET_CLIENT_IP, MYSQL_SECURE_AUTH,
-       MYSQL_REPORT_DATA_TRUNCATION, MYSQL_OPT_RECONNECT, MYSQL_OPT_SSL_VERIFY_SERVER_CERT,
-       MYSQL_PLUGIN_DIR, MYSQL_DEFAULT_AUTH, MYSQL_ENABLE_CLEARTEXT_PLUGIN, MYSQL_PROGRESS_CALLBACK,
-       MYSQL_OPT_NONBLOCK
-
-immutable MYSQL_OPTION
-    opt::UInt16
-end
-
-const MYSQL_OPT_CONNECT_TIMEOUT         = MYSQL_OPTION(0)
-const MYSQL_OPT_COMPRESS                = MYSQL_OPTION(1)
-const MYSQL_OPT_NAMED_PIPE              = MYSQL_OPTION(2)
-const MYSQL_INIT_COMMAND                = MYSQL_OPTION(3)
-const MYSQL_READ_DEFAULT_FILE           = MYSQL_OPTION(4)
-const MYSQL_READ_DEFAULT_GROUP          = MYSQL_OPTION(5)
-const MYSQL_SET_CHARSET_DIR             = MYSQL_OPTION(6)
-const MYSQL_SET_CHARSET_NAME            = MYSQL_OPTION(7)
-const MYSQL_OPT_LOCAL_INFILE            = MYSQL_OPTION(8)
-const MYSQL_OPT_PROTOCOL                = MYSQL_OPTION(9)
-const MYSQL_SHARED_MEMORY_BASE_NAME     = MYSQL_OPTION(10)
-const MYSQL_OPT_READ_TIMEOUT            = MYSQL_OPTION(11)
-const MYSQL_OPT_WRITE_TIMEOUT           = MYSQL_OPTION(12)
-const MYSQL_OPT_USE_RESULT              = MYSQL_OPTION(13)
-const MYSQL_OPT_USE_REMOTE_CONNECTION   = MYSQL_OPTION(14)
-const MYSQL_OPT_USE_EMBEDDED_CONNECTION = MYSQL_OPTION(15)
-const MYSQL_OPT_GUESS_CONNECTION        = MYSQL_OPTION(16)
-const MYSQL_SET_CLIENT_IP               = MYSQL_OPTION(17)
-const MYSQL_SECURE_AUTH                 = MYSQL_OPTION(18)
-const MYSQL_REPORT_DATA_TRUNCATION      = MYSQL_OPTION(19)
-const MYSQL_OPT_RECONNECT               = MYSQL_OPTION(20)
-const MYSQL_OPT_SSL_VERIFY_SERVER_CERT  = MYSQL_OPTION(21)
-const MYSQL_PLUGIN_DIR                  = MYSQL_OPTION(22)
-const MYSQL_DEFAULT_AUTH                = MYSQL_OPTION(23)
-const MYSQL_ENABLE_CLEARTEXT_PLUGIN     = MYSQL_OPTION(24)
-const MYSQL_PROGRESS_CALLBACK           = MYSQL_OPTION(5999)
-const MYSQL_OPT_NONBLOCK                = MYSQL_OPTION(6000)
-
-export MYSQL_PROTOCOL_TYPE
-export MYSQL_PROTOCOL_DEFAULT, MYSQL_PROTOCOL_TCP, MYSQL_PROTOCOL_SOCKET, MYSQL_PROTOCOL_PIPE,
-       MYSQL_PROTOCOL_PIPE
-
-immutable MYSQL_PROTOCOL_TYPE
-    typ::UInt8
-end
-
-const MYSQL_PROTOCOL_DEFAULT    = MYSQL_PROTOCOL_TYPE(0)
-const MYSQL_PROTOCOL_TCP        = MYSQL_PROTOCOL_TYPE(1)
-const MYSQL_PROTOCOL_SOCKET     = MYSQL_PROTOCOL_TYPE(2)
-const MYSQL_PROTOCOL_PIPE       = MYSQL_PROTOCOL_TYPE(3)
-const MYSQL_PROTOCOL_MEMORY     = MYSQL_PROTOCOL_TYPE(4)
-
-
-export MYSQL_STATUS
-export MYSQL_STATUS_READY, MYSQL_STATUS_GET_RESULT, MYSQL_STATUS_USE_RESULT,
-       MYSQL_STATUS_STATEMENT_GET_RESULT
-
-immutable MYSQL_STATUS
-    status::UInt8
-end
-
-const MYSQL_STATUS_READY                = MYSQL_STATUS(0)
-const MYSQL_STATUS_GET_RESULT           = MYSQL_STATUS(1)
-const MYSQL_STATUS_USE_RESULT           = MYSQL_STATUS(2)
-const MYSQL_STATUS_STATEMENT_GET_RESULT = MYSQL_STATUS(3)
-
-export MYSQL_SET_OPTION
-export MYSQL_OPTION_MULTI_STATEMENT_ON, MYSQL_OPTION_MULTI_STATEMENT_OFF
-
-immutable MYSQL_SET_OPTION
-    status::UInt8
-end
-
-const MYSQL_OPTION_MULTI_STATEMENTS_ON  = MYSQL_SET_OPTION(0)
-const MYSQL_OPTION_MULTI_STATEMENTS_OFF = MYSQL_SET_OPTION(1)
-
-export MYSQL_NO_MORE_RESULTS
-
-const MYSQL_NO_MORE_RESULTS               = -1
-
-export MYSQL_SHUTDOWN_KILLABLE_CONNECT, MYSQL_SHUTDOWN_KILLABLE_TRANS,
-       MYSQL_SHUTDOWN_KILLABLE_LOCK_TABLE, MYSQL_SHUTDOWN_KILLABLE_UPDATE
-
-const MYSQL_SHUTDOWN_KILLABLE_CONNECT     = 0x01
-const MYSQL_SHUTDOWN_KILLABLE_TRANS       = 0x02
-const MYSQL_SHUTDOWN_KILLABLE_LOCK_TABLE  = 0x04
-const MYSQL_SHUTDOWN_KILLABLE_UPDATE      = 0x08
-
-export MYSQL_SHUTDOWN_LEVEL
-
-immutable MYSQL_SHUTDOWN_LEVEL
-    level::UInt8
-end
-
-const SHUTDOWN_DEFAULT               = MYSQL_SHUTDOWN_LEVEL(0)
-const SHUTDOWN_WAIT_CONNECTIONS      = MYSQL_SHUTDOWN_LEVEL(MYSQL_SHUTDOWN_KILLABLE_CONNECT)
-const SHUTDOWN_WAIT_TRANSACTIONS     = MYSQL_SHUTDOWN_LEVEL(MYSQL_SHUTDOWN_KILLABLE_TRANS)
-const SHUTDOWN_WAIT_UPDATES          = MYSQL_SHUTDOWN_LEVEL(MYSQL_SHUTDOWN_KILLABLE_UPDATE)
-const SHUTDOWN_WAIT_ALL_BUFFERS      = MYSQL_SHUTDOWN_LEVEL(MYSQL_SHUTDOWN_KILLABLE_UPDATE<<1)
-const SHUTDOWN_WAIT_CRITICAL_BUFFERS = MYSQL_SHUTDOWN_LEVEL((MYSQL_SHUTDOWN_KILLABLE_UPDATE<<1)+1)
-
-export NOT_NULL_FLAG, PRI_KEY_FLAG, UNIQUE_KEY_FLAG, MULTIPLE_KEY_FLAG, BLOB_FLAG, UNSIGNED_FLAG,
-       ZEROFILL_FLAG, BINARY_FLAG, ENUM_FLAG, AUTO_INCREMENT_FLAG, TIMESTAMP_FLAG, SET_FLAG,
-       NO_DEFAULT_VALUE_FLAG, ON_UPDATE_NOW_FLAG, NUM_FLAG, UNIQUE_FLAG, BINCP_FLAG,
-       GET_FIXED_FIELDS_FLAG, FIELD_IN_PART_FUNC_FLAG
+@enum(SHUTDOWN_LEVEL,
+    WAIT_DEFAULT          = 0,
+    WAIT_CONNECTIONS      = SHUTDOWN_KILLABLE_CONNECT,
+    WAIT_TRANSACTIONS     = SHUTDOWN_KILLABLE_TRANS,
+    WAIT_UPDATES          = SHUTDOWN_KILLABLE_UPDATE,
+    WAIT_ALL_BUFFERS      = SHUTDOWN_KILLABLE_UPDATE<<1,
+    WAIT_CRITICAL_BUFFERS = (SHUTDOWN_KILLABLE_UPDATE<<1)+1)
 
 const NOT_NULL_FLAG                  = 0x00000001
 const PRI_KEY_FLAG                   = 0x00000002
@@ -346,14 +186,6 @@ const UNIQUE_FLAG                    = 0x00008000
 const BINCP_FLAG                     = 0x00010000
 const GET_FIXED_FIELDS_FLAG          = 0x00020000
 const FIELD_IN_PART_FUNC_FLAG        = 0x00040000
-
-
-export CLIENT_LONG_PASSWORD, CLIENT_FOUND_ROWS, CLIENT_LONG_FLAG, CLIENT_CONNECT_WITH_DB,
-       CLIENT_NO_SCHEMA, CLIENT_COMPRESS, CLIENT_ODBC, CLIENT_LOCAL_FILES, CLIENT_IGNORE_SPACE,
-       CLIENT_PROTOCOL_41, CLIENT_INTERACTIVE, CLIENT_SSL, CLIENT_IGNORE_SIGPIPE,
-       CLIENT_TRANSACTIONS, CLIENT_RESERVED, CLIENT_SECURE_CONNECTION, CLIENT_MULTI_STATEMENTS,
-       CLIENT_MULTI_RESULTS, CLIENT_PS_MULTI_RESULTS, CLIENT_PLUGIN_AUTH, CLIENT_PROGRESS,
-       CLIENT_SSL_VERIFY_SERVER_CERT
 
 const CLIENT_LONG_PASSWORD           = 0x00000001
 const CLIENT_FOUND_ROWS              = 0x00000002
@@ -377,14 +209,6 @@ const CLIENT_PS_MULTI_RESULTS        = 0x00040000
 const CLIENT_PLUGIN_AUTH             = 0x00080000
 const CLIENT_PROGRESS                = 0x20000000
 const CLIENT_SSL_VERIFY_SERVER_CERT  = 0x40000000
-
-
-export REFRESH_GRANT, REFRESH_LOG, REFRESH_TABLES, REFRESH_HOSTS, REFRESH_STATUS, REFRESH_THREADS,
-       REFRESH_SLAVE, REFRESH_MASTER, REFRESH_ERROR_LOG, REFRESH_ENGINE_LOG, REFRESH_BINARY_LOG,
-       REFRESH_RELAY_LOG, REFRESH_GENERAL_LOG, REFRESH_SLOW_LOG, REFRESH_READ_LOCK,
-       REFRESH_CHECKPOINT, REFRESH_QUERY_CACHE, REFRESH_QUERY_CACHE_FREE, REFRESH_DES_KEY_FILE,
-       REFRESH_USER_RESOURCES, REFRESH_TABLE_STATS, REFRESH_INDEX_STATS, REFRESH_USER_STATS,
-       REFRESH_FAST
 
 const REFRESH_GRANT                  = 0x00000001
 const REFRESH_LOG                    = 0x00000002
@@ -411,7 +235,6 @@ const REFRESH_INDEX_STATS            = 0x00200000
 const REFRESH_USER_STATS             = 0x00400000
 const REFRESH_FAST                   = 0x80000000
 
-
 macro c_str_2_str(c_str)
     return :($c_str == C_NULL ? "" : bytestring($c_str))
 end
@@ -420,7 +243,7 @@ macro str_2_c_str(str)
     return :($str == "" ? Base.convert(Ptr{UInt8}, C_NULL) : pointer($str))
 end
 
-type _MYSQL_FIELD_
+type _DB_FIELD_
     name::Ptr{UInt8}
     org_name::Ptr{UInt8}
     table::Ptr{UInt8}
@@ -437,7 +260,7 @@ type _MYSQL_FIELD_
     table_length::UInt32
     org_table_length::UInt32
     db_length::UInt32
-    catalog_lenght::UInt32
+    catalog_length::UInt32
     def_length::UInt32
     flags::UInt32
     decimals::UInt32
@@ -445,166 +268,56 @@ type _MYSQL_FIELD_
     field_type::UInt32
     extension::Ptr{Void}
 end
-_MYSQL_FIELD_() = _MYSQL_FIELD_(C_NULL, C_NULL, C_NULL, C_NULL, C_NULL, C_NULL, C_NULL,
-                                0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, C_NULL)
+_DB_FIELD_() = _DB_FIELD_(C_NULL, C_NULL, C_NULL, C_NULL, C_NULL, C_NULL, C_NULL,
+                          0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, C_NULL)
 
-export MYSQL_FIELD
-
-type MYSQL_FIELD
-    name::UTF8String
-    org_name::UTF8String
-    table::UTF8String
-    org_table::UTF8String
-    db::UTF8String
-    catalog::UTF8String
-    def::UTF8String
+type DB_FIELD
+    name::ByteString
+    org_name::ByteString
+    table::ByteString
+    org_table::ByteString
+    db::ByteString
+    catalog::ByteString
+    def::ByteString
     length::UInt
     max_length::UInt
-    flags::UInt
-    decimals::UInt
-    charsetnr::UInt
-    field_type::MYSQL_FIELD_TYPE
-    field_julia_type::DataType
+    flags::UInt32
+    decimals::UInt32
+    charsetnr::UInt32
+    field_type::DB_FIELD_TYPE
+    julia_type::DataType
+    type_index::UInt8
 end
 
-const BINARY_PARSE_TYPES = Union{
-    UInt8,
-    UInt16,
-    UInt32,
-    UInt64,
-    Int8,
-    Int16,
-    Int32,
-    Int64,
-    Float32,
-    Float64
-}
-    
-const BINARY_NO_PARSE_TYPES = Union{
-    MYSQL_TYPE_JULIA_TINY_BLOB,
-    MYSQL_TYPE_JULIA_MEDIUM_BLOB,
-    MYSQL_TYPE_JULIA_LONG_BLOB,  
-    MYSQL_TYPE_JULIA_BLOB, 
-    MYSQL_TYPE_JULIA_VARBINARY,
-    MYSQL_TYPE_JULIA_VARBINARY,
-    MYSQL_TYPE_JULIA_BINARY
-}
+map_sql_type(typ, csn, fla) =
+    typearray[typ][(csn == CHAR_SET_BINARY ? 7 : 5) + ((fla & UNSIGNED_FLAG != 0) ? 1 : 0)]
 
-const NO_BINARY_NO_PARSE_TYPES = Union{
-    MYSQL_TYPE_JULIA_TINY_TEXT,
-    MYSQL_TYPE_JULIA_MEDIUM_TEXT,
-    MYSQL_TYPE_JULIA_LONG_TEXT,  
-    MYSQL_TYPE_JULIA_TEXT, 
-    MYSQL_TYPE_JULIA_VARCHAR,
-    MYSQL_TYPE_JULIA_VARCHAR,
-    MYSQL_TYPE_JULIA_CHAR,
-    MYSQL_TYPE_JULIA_DECIMAL,
-    MYSQL_TYPE_JULIA_TIMESTAMP,    
-    MYSQL_TYPE_JULIA_DATE,
-    MYSQL_TYPE_JULIA_TIME,  
-    MYSQL_TYPE_JULIA_DATETIME,
-    MYSQL_TYPE_JULIA_YEAR,    
-    MYSQL_TYPE_JULIA_DATETIME,
-    MYSQL_TYPE_JULIA_VARCHAR,
-    MYSQL_TYPE_JULIA_BIT,
-    MYSQL_TYPE_JULIA_TIMESTAMP,  
-    MYSQL_TYPE_JULIA_DATETIME,
-    MYSQL_TYPE_JULIA_TIME,   
-    MYSQL_TYPE_JULIA_DECIMAL,
-    MYSQL_TYPE_JULIA_ENUM,
-    MYSQL_TYPE_JULIA_SET,
-    MYSQL_TYPE_JULIA_GEOMETRY
-}
-
-function __init__()
-    const global MYSQL_TYPES_JULIA_BINARY_UNSIGNED = Dict(
-        MYSQL_TYPE_TINY => UInt8,
-        MYSQL_TYPE_SHORT => UInt16,
-        MYSQL_TYPE_INT24 => UInt32,
-        MYSQL_TYPE_LONG => UInt32,    
-        MYSQL_TYPE_LONGLONG => UInt64,
-        MYSQL_TYPE_TIMESTAMP => MYSQL_TYPE_JULIA_TIMESTAMP,
-        MYSQL_TYPE_TIMESTAMP2 => MYSQL_TYPE_JULIA_TIMESTAMP,  
-        MYSQL_TYPE_NOWDATE => MYSQL_TYPE_JULIA_DATETIME,
-        MYSQL_TYPE_YEAR => MYSQL_TYPE_JULIA_YEAR
-    )
-
-    const global MYSQL_TYPES_JULIA_BINARY_SIGNED = Dict(
-        MYSQL_TYPE_TINY => Int8,
-        MYSQL_TYPE_SHORT => Int16,
-        MYSQL_TYPE_INT24 => Int32,
-        MYSQL_TYPE_LONG => Int32,    
-        MYSQL_TYPE_LONGLONG => Int64,
-        MYSQL_TYPE_FLOAT => Float32,
-        MYSQL_TYPE_DOUBLE => Float64, 
-        MYSQL_TYPE_TINY_BLOB => MYSQL_TYPE_JULIA_TINY_BLOB,
-        MYSQL_TYPE_MEDIUM_BLOB => MYSQL_TYPE_JULIA_MEDIUM_BLOB,
-        MYSQL_TYPE_LONG_BLOB => MYSQL_TYPE_JULIA_LONG_BLOB,  
-        MYSQL_TYPE_BLOB => MYSQL_TYPE_JULIA_BLOB, 
-        MYSQL_TYPE_VAR_STRING => MYSQL_TYPE_JULIA_VARBINARY,
-        MYSQL_TYPE_VARCHAR => MYSQL_TYPE_JULIA_VARBINARY,
-        MYSQL_TYPE_STRING => MYSQL_TYPE_JULIA_BINARY
-    )
-
-    const global MYSQL_TYPES_JULIA_NO_BINARY = Dict(
-        MYSQL_TYPE_TINY_BLOB => MYSQL_TYPE_JULIA_TINY_TEXT,
-        MYSQL_TYPE_MEDIUM_BLOB => MYSQL_TYPE_JULIA_MEDIUM_TEXT,
-        MYSQL_TYPE_LONG_BLOB => MYSQL_TYPE_JULIA_LONG_TEXT,  
-        MYSQL_TYPE_BLOB => MYSQL_TYPE_JULIA_TEXT, 
-        MYSQL_TYPE_VAR_STRING => MYSQL_TYPE_JULIA_VARCHAR,
-        MYSQL_TYPE_VARCHAR => MYSQL_TYPE_JULIA_VARCHAR,
-        MYSQL_TYPE_STRING => MYSQL_TYPE_JULIA_CHAR,
-        MYSQL_TYPE_DECIMAL => MYSQL_TYPE_JULIA_DECIMAL,
-        MYSQL_TYPE_NEWDECIMAL => MYSQL_TYPE_JULIA_DECIMAL,
-        MYSQL_TYPE_NULL => Void,
-        MYSQL_TYPE_DATE => MYSQL_TYPE_JULIA_DATE,
-        MYSQL_TYPE_TIME => MYSQL_TYPE_JULIA_TIME,  
-        MYSQL_TYPE_DATETIME => MYSQL_TYPE_JULIA_DATETIME,
-        MYSQL_TYPE_VAR_STRING => MYSQL_TYPE_JULIA_VARCHAR,
-        MYSQL_TYPE_VARCHAR => MYSQL_TYPE_JULIA_VARCHAR,
-        MYSQL_TYPE_BIT => MYSQL_TYPE_JULIA_BIT,
-        MYSQL_TYPE_DATETIME2 => MYSQL_TYPE_JULIA_DATETIME,
-        MYSQL_TYPE_TIME2 => MYSQL_TYPE_JULIA_TIME,   
-        MYSQL_TYPE_NEWDECIMAL => MYSQL_TYPE_JULIA_DECIMAL,
-        MYSQL_TYPE_ENUM => MYSQL_TYPE_JULIA_ENUM,
-        MYSQL_TYPE_SET => MYSQL_TYPE_JULIA_SET,
-        MYSQL_TYPE_GEOMETRY => MYSQL_TYPE_JULIA_GEOMETRY
-    ) 
+function db_type_name(field::DB_FIELD)
+    typ = typearray[field.type_index]
+    typ[(field.charsetnr == CHAR_SET_BINARY ? 3 : 1) + ((field.flags & UNSIGNED_FLAG != 0) ? 1 : 0)]
 end
 
-function map_sql_type(typ, csn, fla)
-    if csn == MYSQL_CHAR_SET_BINARY
-        if fla & UNSIGNED_FLAG == UNSIGNED_FLAG
-            return MYSQL_TYPES_JULIA_BINARY_UNSIGNED[MYSQL_FIELD_TYPE(typ)]
-        end
-        if haskey(MYSQL_TYPES_JULIA_BINARY_SIGNED, MYSQL_FIELD_TYPE(typ))
-            return MYSQL_TYPES_JULIA_BINARY_SIGNED[MYSQL_FIELD_TYPE(typ)]
-        end
-    end
-    return MYSQL_TYPES_JULIA_NO_BINARY[MYSQL_FIELD_TYPE(typ)]
-end   
-
-MYSQL_FIELD() = MYSQL_FIELD("", "", "", "", "", 0, 0, 0, 0, 0, Void)
-function MYSQL_FIELD(c_mysql_field::_MYSQL_FIELD_)
-    MYSQL_FIELD(
-        @c_str_2_str(c_mysql_field.name),
-        @c_str_2_str(c_mysql_field.org_name),
-        @c_str_2_str(c_mysql_field.table),
-        @c_str_2_str(c_mysql_field.org_table),
-        @c_str_2_str(c_mysql_field.db),
-        @c_str_2_str(c_mysql_field.catalog),
-        @c_str_2_str(c_mysql_field.def),
-        c_mysql_field.length,
-        c_mysql_field.max_length,
-        c_mysql_field.flags,
-        c_mysql_field.decimals,
-        c_mysql_field.charsetnr,
-        MYSQL_FIELD_TYPE(c_mysql_field.field_type),
-        map_sql_type(c_mysql_field.field_type, c_mysql_field.charsetnr, c_mysql_field.flags)
-    )
+DB_FIELD() = DB_FIELD("", "", "", "", "", 0, 0, 0, 0, 0, Void)
+function DB_FIELD(c_db_field::_DB_FIELD_)
+    index = _typeindex(c_db_field.field_type)
+    DB_FIELD(@c_str_2_str(c_db_field.name),
+             @c_str_2_str(c_db_field.org_name),
+             @c_str_2_str(c_db_field.table),
+             @c_str_2_str(c_db_field.org_table),
+             @c_str_2_str(c_db_field.db),
+             @c_str_2_str(c_db_field.catalog),
+             @c_str_2_str(c_db_field.def),
+             c_db_field.length,
+             c_db_field.max_length,
+             c_db_field.flags,
+             c_db_field.decimals,
+             c_db_field.charsetnr,
+             DB_FIELD_TYPE(c_db_field.field_type),
+    	     map_sql_type(index, c_db_field.charsetnr, c_db_field.flags),
+    	     index)   
 end
 
-type _MY_CHARSET_INFO_
+type _DB_CHARSET_INFO_
     number::UInt32
     state::UInt32
     csname::Ptr{UInt8}
@@ -614,23 +327,22 @@ type _MY_CHARSET_INFO_
     mbminlen::UInt32
     mbmaxlen::UInt32
 end
-_MY_CHARSET_INFO_() = _MY_CHARSET_INFO_(0, 0, C_NULL, C_NULL, C_NULL, C_NULL, 0, 0)
+_DB_CHARSET_INFO_() = _DB_CHARSET_INFO_(0, 0, C_NULL, C_NULL, C_NULL, C_NULL, 0, 0)
 
-export MY_CHARSET_INFO
-
-type MY_CHARSET_INFO
-    number::UInt
-    state::UInt
-    csname::UTF8String
-    name::UTF8String
-    comment::UTF8String
-    dir::UTF8String
-    mbminlen::UInt
-    mbmaxlen::UInt
+type DB_CHARSET_INFO
+    number::UInt32
+    state::UInt32
+    csname::ByteString
+    name::ByteString
+    comment::ByteString
+    dir::ByteString
+    mbminlen::UInt32
+    mbmaxlen::UInt32
 end
-MY_CHARSET_INFO() = MY_CHARSET_INFO(0, 0, "", "", "", "", 0, 0)
-function MY_CHARSET_INFO(c_charset_info::_MY_CHARSET_INFO_)
-    MY_CHARSET_INFO(
+
+DB_CHARSET_INFO() = DB_CHARSET_INFO(0, 0, "", "", "", "", 0, 0)
+function DB_CHARSET_INFO(c_charset_info::_DB_CHARSET_INFO_)
+    DB_CHARSET_INFO(
         c_charset_info.number,
         c_charset_info.state,
         @c_str_2_str(c_charset_info.csname),
@@ -642,10 +354,7 @@ function MY_CHARSET_INFO(c_charset_info::_MY_CHARSET_INFO_)
     )
 end
 
-
-export MYSQL_TIME
-
-type MYSQL_TIME
+type DB_TIME
     year::UInt32
     month::UInt32
     day::UInt32
@@ -655,5 +364,5 @@ type MYSQL_TIME
     @windows_only second_part::UInt32
     @unix_only second_part::UInt
     neg::Int8
-    time_type::MYSQL_TIMESTAMP_TYPE
+    time_type::Int8
 end

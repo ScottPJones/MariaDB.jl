@@ -2,7 +2,7 @@
 # They are derived from:
 # https://mariadb.com/kb/en/mariadb/mariadb-connector-c
 
-const MYSQL_OK = 0
+const DB_OK = 0
 
 const ER_ERROR_FIRST = 1000
 const ER_HASHCHK = 1000
@@ -835,4 +835,4 @@ const CR_ALREADY_CONNECTED = 2058
 const CR_AUTH_PLUGIN_CANNOT_LOAD = 2059
 const CR_ERROR_LAST = 2059
 
-export MYSQL_OK
+export DB_OK
